@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "portfolio_site.settings.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+testpaths = ["about", "core", "contact", "projects", "portfolio_site"]
+addopts = "-ra"
