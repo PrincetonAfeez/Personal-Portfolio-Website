@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-kicker">
+  <p class="eyebrow">Contact</p>
+  <h1>Let’s talk systems, service, and software</h1>
+  <p>Use the form or reach out directly through the links below.</p>
+</section>
+
+<section class="section contact-layout">
+  <div class="contact-direct">
+    <h2>Direct links</h2>
+    <a href="mailto:hello@example.com">hello@example.com</a>
+    <a href="https://github.com/" rel="noreferrer">GitHub</a>
+    <a href="https://www.linkedin.com/" rel="noreferrer">LinkedIn</a>
+  </div>
+  {% include "contact/partials/_contact_form.html" %}
+</section>
+{% endblock %}
+

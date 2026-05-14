@@ -1,0 +1,55 @@
+{% extends "about/base.html" %}
+
+{% block about_content %}
+<section class="section split split--top">
+  <div>
+    <p class="eyebrow">Bio</p>
+    <h2>From service pressure to system clarity</h2>
+  </div>
+  <div class="story-copy">
+    <p>I bring hospitality instincts into technical work: noticing handoff friction, designing for rush-hour reality, and building interfaces that reduce uncertainty instead of adding another screen to check.</p>
+    <p>The last twelve months have focused on Python, Django, HTMX, relational modeling, testing, deployment, and the architecture habits that keep small systems honest as they grow.</p>
+  </div>
+</section>
+
+<section class="section band">
+  <div class="section-heading">
+    <p class="eyebrow">Skills</p>
+    <h2>Current toolkit</h2>
+  </div>
+  <div class="skill-grid">
+    {% for skill in skills %}
+      <article class="skill-card">
+        <span>{{ skill.category }}</span>
+        <h3>{{ skill.name }}</h3>
+        <p>{{ skill.months_of_use }} months</p>
+        <div class="meter" aria-label="{{ skill.proficiency }} out of 5 proficiency">
+          <i style="width: {% widthratio skill.proficiency 5 100 %}%"></i>
+        </div>
+      </article>
+    {% empty %}
+      <p class="empty-state">Run <code>python manage.py seed_portfolio</code> to load skills.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Timeline</p>
+    <h2>Learning arc</h2>
+  </div>
+  <div class="timeline">
+    {% for entry in timeline_entries %}
+      <article class="timeline-entry">
+        <time datetime="{{ entry.date|date:'Y-m-d' }}">{{ entry.date|date:"M Y" }}</time>
+        <div>
+          <span>{{ entry.get_entry_type_display }}</span>
+          <h3>{{ entry.title }}</h3>
+          <p>{{ entry.description }}</p>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+

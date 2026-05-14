@@ -1,0 +1,27 @@
+<div id="contact-form-shell" class="contact-form-shell">
+  {% if success %}
+    <div class="success-panel" role="status">
+      <h2>Message received</h2>
+      <p>Thanks for reaching out. I’ll review it and follow up from the direct email channel.</p>
+    </div>
+  {% endif %}
+  <form class="contact-form" method="post" action="{% url 'contact:index' %}" hx-post="{% url 'contact:index' %}" hx-target="#contact-form-shell" hx-swap="outerHTML" novalidate>
+    {% csrf_token %}
+    <div class="hp-field" aria-hidden="true">
+      <label for="{{ form.referral_source.id_for_label }}">{{ form.referral_source.label }}</label>
+      {{ form.referral_source }}
+    </div>
+    {% for field in form %}
+      {% if field.name != "referral_source" %}
+      <label>
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% if field.errors %}<small>{{ field.errors|striptags }}</small>{% endif %}
+      </label>
+      {% endif %}
+    {% endfor %}
+    {% if form.non_field_errors %}<p class="form-error">{{ form.non_field_errors|striptags }}</p>{% endif %}
+    <button class="button" type="submit">Send message</button>
+  </form>
+</div>
+

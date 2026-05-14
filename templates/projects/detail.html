@@ -1,0 +1,41 @@
+{% extends "projects/base.html" %}
+{% load portfolio_tags thumbnail %}
+
+{% block project_heading %}{{ project.title }}{% endblock %}
+{% block project_intro %}{{ project.summary }}{% endblock %}
+
+{% block project_content %}
+<article class="project-detail section">
+  {% if project.hero_image %}
+    <img class="project-detail__hero" src="{{ project.hero_image|thumbnail_url:'detail' }}" alt="{{ project.hero_alt|default:project.title }}" loading="eager">
+  {% endif %}
+
+  <div class="project-detail__meta">
+    <span>{{ project.body|reading_time }}</span>
+    {% if project.published_at %}<span>{{ project.published_at|date:"M j, Y" }}</span>{% endif %}
+    {% if project.repo_url %}<a href="{{ project.repo_url }}" rel="noreferrer">Repository</a>{% endif %}
+    {% if project.demo_url %}<a href="{{ project.demo_url }}" rel="noreferrer">Live demo</a>{% endif %}
+  </div>
+
+  <div class="tag-rack tag-rack--compact">
+    {% for tag in project.tags.all %}
+      <a href="{% url 'projects:tag' tag.slug %}">{{ tag.name }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="prose">
+    {{ project.body|markdownify }}
+  </div>
+
+  <nav class="adjacent-nav" aria-label="Adjacent projects">
+    {% if previous_project %}
+      <a href="{{ previous_project.get_absolute_url }}"><span>Previous</span>{{ previous_project.title }}</a>
+    {% else %}
+      <span></span>
+    {% endif %}
+    {% if next_project %}
+      <a href="{{ next_project.get_absolute_url }}"><span>Next</span>{{ next_project.title }}</a>
+    {% endif %}
+  </nav>
+</article>
+{% endblock %}

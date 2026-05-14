@@ -1,0 +1,17 @@
+{% extends "projects/base.html" %}
+
+{% block project_heading %}{{ page_title }}{% endblock %}
+{% block project_intro %}Filter the archive by operating problem, technical focus, or learning milestone.{% endblock %}
+
+{% block project_content %}
+<section class="section project-browser">
+  <aside class="filter-panel" aria-label="Project filters">
+    <a class="filter-chip {% if not selected_tag %}filter-chip--active{% endif %}" href="{% url 'projects:index' %}" hx-get="{% url 'projects:index' %}" hx-target="#project-grid-shell" hx-push-url="true">All</a>
+    {% for tag in tags %}
+      <a class="filter-chip {% if selected_tag == tag %}filter-chip--active{% endif %}" href="{% url 'projects:tag' tag.slug %}" hx-get="{% url 'projects:tag' tag.slug %}" hx-target="#project-grid-shell" hx-push-url="true">{{ tag.name }}</a>
+    {% endfor %}
+  </aside>
+  {% include "projects/partials/_project_grid.html" %}
+</section>
+{% endblock %}
+

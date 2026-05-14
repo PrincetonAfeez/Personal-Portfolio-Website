@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-kicker">
+  <p class="eyebrow">Portfolio</p>
+  <h1>{% block project_heading %}Projects{% endblock %}</h1>
+  <p>{% block project_intro %}Published work from a year of Python, Django, HTMX, data modeling, and architecture practice.{% endblock %}</p>
+</section>
+{% block project_content %}{% endblock %}
+{% endblock %}
+

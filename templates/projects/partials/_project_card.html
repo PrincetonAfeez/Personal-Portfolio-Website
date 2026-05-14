@@ -1,0 +1,22 @@
+{% load thumbnail %}
+<article class="project-card">
+  <a class="project-card__media" href="{{ project.get_absolute_url }}" aria-label="{{ project.title }}">
+    {% if project.hero_image %}
+      <img src="{{ project.hero_image|thumbnail_url:'card' }}" alt="{{ project.hero_alt|default:project.title }}" loading="lazy">
+    {% endif %}
+  </a>
+  <div class="project-card__body">
+    <div class="project-card__tags">
+      {% for tag in project.tags.all|slice:":2" %}
+        <a href="{% url 'projects:tag' tag.slug %}">{{ tag.name }}</a>
+      {% endfor %}
+    </div>
+    <h3><a href="{{ project.get_absolute_url }}">{{ project.title }}</a></h3>
+    <p>{{ project.summary }}</p>
+    <div class="tech-line">
+      {% for tech in project.tech_stack.all|slice:":4" %}
+        <span>{{ tech.name }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</article>

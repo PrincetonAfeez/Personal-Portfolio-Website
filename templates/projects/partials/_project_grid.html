@@ -1,0 +1,19 @@
+<div id="project-grid-shell" class="project-grid-shell">
+  <div class="result-bar">
+    <span>{{ page_obj.paginator.count }} project{{ page_obj.paginator.count|pluralize }}</span>
+    {% if selected_tag %}<strong>{{ selected_tag.name }}</strong>{% endif %}
+  </div>
+  <div class="project-grid">
+    {% for project in projects %}
+      {% include "projects/partials/_project_card.html" %}
+    {% empty %}
+      <p class="empty-state">No published projects match this filter yet.</p>
+    {% endfor %}
+  </div>
+  {% if page_obj.has_next %}
+    <div class="load-more">
+      <a class="button button--ghost" href="{{ request.path }}?page={{ page_obj.next_page_number }}" hx-get="{{ request.path }}?page={{ page_obj.next_page_number }}" hx-target="#project-grid-shell" hx-swap="outerHTML" hx-push-url="true">Load more</a>
+    </div>
+  {% endif %}
+</div>
+

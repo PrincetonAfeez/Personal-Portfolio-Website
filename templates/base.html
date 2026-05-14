@@ -1,0 +1,63 @@
+{% load static portfolio_tags %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <title>{% block title %}{% if page_title %}{{ page_title }} | {% endif %}Prince Anumudu{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}{{ meta_description|default:'Hospitality technology portfolio for Python, Django, HTMX, and systems architecture work.' }}{% endblock %}">
+  <meta property="og:title" content="{% if page_title %}{{ page_title }} | {% endif %}Prince Anumudu">
+  <meta property="og:description" content="{{ meta_description|default:'Hospitality technology portfolio for Python, Django, HTMX, and systems architecture work.' }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ site_origin }}{% static 'img/operations-map.png' %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous" defer></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <a class="skip-link" href="#page">Skip to content</a>
+  <header class="site-header" id="site-header">
+    <nav class="nav-shell" aria-label="Primary">
+      <a class="brand" href="{% url 'home' %}" aria-label="Prince Anumudu home">
+        <span class="brand-mark">PA</span>
+        <span>Prince Anumudu</span>
+      </a>
+      <div class="nav-links" id="site-nav">
+        <a class="nav-link {% active_nav 'home' %}" href="{% url 'home' %}">Home</a>
+        <a class="nav-link {% active_nav 'projects' %}" href="{% url 'projects:index' %}">Projects</a>
+        <a class="nav-link {% active_nav 'about' %}" href="{% url 'about' %}">About</a>
+        <a class="nav-link {% active_nav 'resume' %}" href="{% url 'resume' %}">Resume</a>
+        <a class="button button--small" href="{% url 'contact:index' %}">Contact</a>
+      </div>
+    </nav>
+  </header>
+
+  {% if messages %}
+    <div class="message-stack" aria-live="polite">
+      {% for message in messages %}
+        <p class="message message--{{ message.tags }}">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main id="page">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div>
+      <strong>Prince Anumudu</strong>
+      <p>Hospitality operations translated into maintainable web systems.</p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/" rel="noreferrer">GitHub</a>
+      <a href="https://www.linkedin.com/" rel="noreferrer">LinkedIn</a>
+      <a href="mailto:hello@example.com">Email</a>
+    </div>
+  </footer>
+</body>
+</html>
+

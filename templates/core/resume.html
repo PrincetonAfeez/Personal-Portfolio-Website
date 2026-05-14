@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-kicker">
+  <p class="eyebrow">Resume</p>
+  <h1>Hospitality operations and hospitality tech</h1>
+  <p>Embedded resume with a downloadable PDF copy.</p>
+</section>
+
+<section class="section resume-layout">
+  <div class="resume-actions">
+    <a class="button" href="{% static 'resume/prince-anumudu-resume.pdf' %}" download>Download PDF</a>
+    <a class="button button--ghost" href="{% url 'contact:index' %}">Start a conversation</a>
+  </div>
+  <object class="resume-frame" data="{% static 'resume/prince-anumudu-resume.pdf' %}" type="application/pdf">
+    <p>Your browser cannot display the embedded PDF. Use the download link above.</p>
+  </object>
+</section>
+{% endblock %}
+

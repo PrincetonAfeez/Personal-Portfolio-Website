@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="error-page">
+  <p class="eyebrow">404</p>
+  <h1>That page is off the floor plan</h1>
+  <p>The route may have moved, or the project may not be published yet.</p>
+  <a class="button" href="{% url 'projects:index' %}">Back to projects</a>
+</section>
+{% endblock %}
+
