@@ -52,6 +52,21 @@ def test_contact_stores_remote_addr_when_forwarded_header_untrusted(client):
 
 
 @pytest.mark.django_db
+def test_contact_stores_first_forwarded_hop_when_trust_enabled(client):
+    cache.clear()
+    with override_settings(CONTACT_TRUST_X_FORWARDED_FOR=True):
+        client.post(
+            reverse("contact:index"),
+            _contact_payload(),
+            HTTP_HX_REQUEST="true",
+            HTTP_X_FORWARDED_FOR="203.0.113.7, 10.0.0.1",
+            REMOTE_ADDR="127.0.0.1",
+        )
+    row = ContactSubmission.objects.get()
+    assert row.ip_address == "203.0.113.7"
+
+
+@pytest.mark.django_db
 def test_contact_form_invalid_submission_shows_errors(client):
     cache.clear()
     response = client.post(
