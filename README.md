@@ -30,7 +30,7 @@ Copy `.env.example` to `.env` and adjust values.
 
 | Variable | Purpose |
 | --- | --- |
-| `SECRET_KEY` | Django secret key (required outside local defaults). |
+| `SECRET_KEY` | Django secret key. Dev `base` settings allow a local default; **production** (`portfolio_site.settings.prod`) requires a non-empty value in the real environment (see below). |
 | `DEBUG` | Enables debug mode; must be false in production. |
 | `ALLOWED_HOSTS` | Comma-separated hostnames. |
 | `DATABASE_URL` | Database URL (SQLite file URL in dev, Postgres in prod). |
@@ -41,6 +41,10 @@ Copy `.env.example` to `.env` and adjust values.
 | `CONTACT_NOTIFICATION_EMAIL` | If set, contact form sends a notification to this address after each save. |
 | `CONTACT_RATE_LIMIT_WINDOW` | Rate limit window in seconds for contact submissions per IP (default `900`). |
 | `CONTACT_RATE_LIMIT_MAX` | Max submissions per IP per window (default `5`). |
+| `CONTACT_TRUST_X_FORWARDED_FOR` | If `True`, the contact form uses the first `X-Forwarded-For` hop for client IP (rate limits and stored IP). Keep `False` unless you are behind a **trusted** proxy that sets or strips this header; otherwise clients can spoof it. |
+| `PUBLIC_GITHUB_URL` | Footer and contact “GitHub” link URL. |
+| `PUBLIC_LINKEDIN_URL` | Footer and contact “LinkedIn” link URL. |
+| `PUBLIC_CONTACT_EMAIL` | Shown in the footer and contact page; used in `mailto:` links. |
 | `SECURE_SSL_REDIRECT` | Production: redirect HTTP to HTTPS. |
 | `SECURE_HSTS_SECONDS` | Production HSTS max-age in seconds. |
 
@@ -68,6 +72,10 @@ For more detail on failures:
 .\.venv\Scripts\python -m pytest -vv --tb=short
 ```
 
+## Continuous integration
+
+GitHub Actions runs the test suite on push and pull request to `main` or `master` (see `.github/workflows/ci.yml`).
+
 ## Architecture notes
 
 Architecture decisions are recorded as ADRs under `docs/adr/` (for example HTMX vs React, slug strategy, SQLite dev vs Postgres prod).
@@ -75,6 +83,8 @@ Architecture decisions are recorded as ADRs under `docs/adr/` (for example HTMX 
 ## Deploying to Railway
 
 1. Set `DJANGO_SETTINGS_MODULE=portfolio_site.settings.prod`.
-2. Set `SECRET_KEY`, `ALLOWED_HOSTS`, `DATABASE_URL`, and `CANONICAL_URL`.
-3. Optional: set `CONTACT_NOTIFICATION_EMAIL` and a real `EMAIL_BACKEND` if you want email alerts for contact form submissions.
-4. Railway uses `railway.toml` or the `Procfile` start command to run migrations, collect static files, and launch Gunicorn.
+2. Set **`SECRET_KEY`** (required: production settings refuse to start without a non-empty `SECRET_KEY` in the environment), plus `ALLOWED_HOSTS`, `DATABASE_URL`, and `CANONICAL_URL`.
+3. Set `PUBLIC_GITHUB_URL`, `PUBLIC_LINKEDIN_URL`, and `PUBLIC_CONTACT_EMAIL` to your real links and email when you want them on the public site.
+4. If the app runs behind Railway’s proxy and you want rate limits keyed to the real client IP, set `CONTACT_TRUST_X_FORWARDED_FOR=True` only after confirming your deployment trusts the forwarded chain (Railway typically terminates TLS and sets forwarding headers correctly).
+5. Optional: set `CONTACT_NOTIFICATION_EMAIL` and a real `EMAIL_BACKEND` if you want email alerts for contact form submissions.
+6. Railway uses `railway.toml` or the `Procfile` start command to run migrations, collect static files, and launch Gunicorn.
