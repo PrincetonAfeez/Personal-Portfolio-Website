@@ -1,0 +1,36 @@
+{
+  "repository": "PrincetonAfeez/Personal-Portfolio-Website",
+  "folder": "Schema",
+  "generated_on": "2026-05-14",
+  "files": [
+    {
+      "path": "Schema/projects.schema.json",
+      "models": [
+        "Project",
+        "Tag",
+        "TechStack"
+      ],
+      "source_app": "projects"
+    },
+    {
+      "path": "Schema/about.schema.json",
+      "models": [
+        "Skill",
+        "TimelineEntry"
+      ],
+      "source_app": "about"
+    },
+    {
+      "path": "Schema/contact.schema.json",
+      "models": [
+        "ContactSubmission",
+        "ContactFormInput"
+      ],
+      "source_app": "contact"
+    },
+    {
+      "path": "Schema/database_schema.sql",
+      "type": "sql-reference"
+    }
+  ]
+}

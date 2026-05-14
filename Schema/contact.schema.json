@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/contact.schema.json",
+  "title": "Contact App Schema",
+  "description": "JSON Schema for contact form input and saved contact submissions.",
+  "$defs": {
+    "ContactFormInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "email",
+        "message"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "referral_source": {
+          "type": "string",
+          "description": "Optional honeypot field used by the form."
+        }
+      }
+    },
+    "ContactSubmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "email",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "submitted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ip_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "ipv4"
+            },
+            {
+              "type": "string",
+              "format": "ipv6"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ContactFormInput"
+    },
+    {
+      "$ref": "#/$defs/ContactSubmission"
+    }
+  ]
+}

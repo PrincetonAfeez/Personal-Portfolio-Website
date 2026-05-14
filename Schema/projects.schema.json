@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/projects.schema.json",
+  "title": "Projects App Schema",
+  "description": "JSON Schema for the portfolio project's projects app models.",
+  "$defs": {
+    "Tag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "slug"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 90,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "TechStack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "slug",
+        "category"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 90,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "language",
+            "framework",
+            "tool",
+            "service"
+          ]
+        }
+      }
+    },
+    "Project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "summary",
+        "body"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Unique slug. Django auto-generates it from title when blank."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short copy used on cards and meta descriptions."
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Markdown project writeup rendered server-side."
+        },
+        "hero_image": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Path or URL to the uploaded hero image."
+        },
+        "hero_alt": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Tag"
+          },
+          "uniqueItems": true
+        },
+        "tech_stack": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TechStack"
+          },
+          "uniqueItems": true
+        },
+        "is_published": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_featured": {
+          "type": "boolean",
+          "default": false
+        },
+        "published_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "repo_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "demo_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Tag"
+    },
+    {
+      "$ref": "#/$defs/TechStack"
+    },
+    {
+      "$ref": "#/$defs/Project"
+    }
+  ]
+}

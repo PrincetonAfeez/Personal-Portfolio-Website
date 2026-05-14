@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/about.schema.json",
+  "title": "About App Schema",
+  "description": "JSON Schema for skills and timeline entries.",
+  "$defs": {
+    "Skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "category"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "months_of_use": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "default": 0
+        },
+        "proficiency": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "default": 3,
+          "description": "Django field allows positive small integers. Use your app conventions for scale."
+        }
+      }
+    },
+    "TimelineEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "title",
+        "description",
+        "entry_type"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_type": {
+          "type": "string",
+          "enum": [
+            "learning",
+            "work",
+            "project"
+          ]
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Skill"
+    },
+    {
+      "$ref": "#/$defs/TimelineEntry"
+    }
+  ]
+}
