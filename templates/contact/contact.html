@@ -10,9 +10,9 @@
 <section class="section contact-layout">
   <div class="contact-direct">
     <h2>Direct links</h2>
-    <a href="mailto:hello@example.com">hello@example.com</a>
-    <a href="https://github.com/" rel="noreferrer">GitHub</a>
-    <a href="https://www.linkedin.com/" rel="noreferrer">LinkedIn</a>
+    <a href="mailto:{{ public_contact_email }}">{{ public_contact_email }}</a>
+    <a href="{{ public_github_url }}" rel="noreferrer">GitHub</a>
+    <a href="{{ public_linkedin_url }}" rel="noreferrer">LinkedIn</a>
   </div>
   {% include "contact/partials/_contact_form.html" %}
 </section>
