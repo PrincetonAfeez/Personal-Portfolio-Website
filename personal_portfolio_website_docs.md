@@ -30,7 +30,7 @@ The decision was to build a production-shaped Django portfolio that demonstrates
 ### Decision 2 — Separate apps for core pages, projects, about content, and contact
 
 **Chosen:** The Django project uses:
-- `core` for home/about/resume/robots/errors/context/template tags/sitemaps
+- `core` for home/about/resume/robots/errors views, context processors, template tags, and static sitemap wiring (`core` has **no** Django ORM models; avoid duplicating models defined elsewhere)
 - `projects` for project catalogue models, views, services, URLs, sitemap, and seed command
 - `about` for skills and timeline entries
 - `contact` for contact submissions, form validation, rate limiting, and optional notification email
@@ -93,11 +93,11 @@ The decision was to build a production-shaped Django portfolio that demonstrates
 
 ### Decision 8 — Contact form with honeypot, rate limiting, persistence, and optional notification
 
-**Chosen:** The contact workflow stores `ContactSubmission` rows, records client IP, includes a honeypot field, rate-limits submissions by IP through Django cache, optionally sends a notification email, and supports HTMX partial success/error rendering.
+**Chosen:** The contact workflow stores `ContactSubmission` rows, records client IP (using `REMOTE_ADDR` by default, or the first `X-Forwarded-For` hop only when `CONTACT_TRUST_X_FORWARDED_FOR` is enabled behind a trusted proxy), includes a honeypot field, rate-limits submissions by IP through Django cache, optionally sends a notification email, and supports HTMX partial success/error rendering.
 
 **Rejected:** Simple `mailto:` only or unprotected form submission.
 
-**Reason:** A real contact form demonstrates form handling, database persistence, user feedback, spam resistance, cache-backed rate limiting, email integration, and graceful failure. The form saves messages even if optional notification email fails.
+**Reason:** A real contact form demonstrates form handling, database persistence, user feedback, spam resistance, cache-backed rate limiting, email integration, and graceful failure. The form saves messages even if optional notification email fails. Client IP for rate limits and persistence is not taken from `X-Forwarded-For` unless explicitly trusted, to reduce trivial header spoofing.
 
 ---
 
@@ -141,7 +141,7 @@ The decision was to build a production-shaped Django portfolio that demonstrates
 - HTMX improves browsing and form submission without a JavaScript framework.
 - Tailwind output is committed so the site can run without Node.
 - Deployment configuration is simple and Railway-compatible.
-- Tests cover publication rules, slugs, sitemaps, HTMX partials, contact workflows, canonical URLs, robots.txt, and error pages.
+- Tests cover publication rules, slugs, sitemaps, HTMX partials, contact workflows (including honeypot, rate limits, and notification failure tolerance), canonical and public-profile context, middleware (CSP / debug timing), templatetag sanitization, robots.txt, invalid pagination, and custom error pages. GitHub Actions runs `pytest` on push/PR (see `.github/workflows/ci.yml`).
 
 **Negative / Trade-offs:**
 - The site is heavier than a static portfolio.
@@ -176,7 +176,7 @@ The decision was to build a production-shaped Django portfolio that demonstrates
 
 ## Overview
 
-Personal Portfolio Website is a Django + HTMX monolith for a hospitality-technology portfolio. It includes public marketing pages, a project archive, tag-filtered project browsing, project detail pages with Markdown-rendered bodies, an about page backed by skills and timeline models, a contact form with spam/rate-limit controls, canonical URL generation, robots.txt, sitemaps, custom error pages, request timing/CSP middleware, thumbnail aliases, Tailwind CSS, and Railway/Gunicorn deployment support.
+Personal Portfolio Website is a Django + HTMX monolith for a hospitality-technology portfolio. It includes public marketing pages, a project archive, tag-filtered project browsing, project detail pages with Markdown-rendered bodies, an about page backed by skills and timeline models, a contact form with spam/rate-limit controls (including configurable trust for `X-Forwarded-For`), canonical URL and public-profile link context, robots.txt, sitemaps, custom error pages, request timing/CSP middleware, thumbnail aliases, Tailwind CSS, production **`SECRET_KEY`** enforcement in `settings.prod`, GitHub Actions CI, and Railway/Gunicorn deployment support.
 
 **Project package:** `portfolio_site`  
 **Django apps:** `core`, `projects`, `about`, `contact`  
@@ -254,11 +254,11 @@ GET /contact/
   → templates/contact/contact.html
 
 POST /contact/
-  → honeypot check
+  → honeypot check (silent success if filled; no save)
   → ContactSubmissionForm(request.POST)
-  → rate-limit check by client IP
+  → rate-limit check by client IP (see client_ip / CONTACT_TRUST_X_FORWARDED_FOR)
   → save ContactSubmission with IP
-  → optional send_mail notification
+  → optional send_mail notification (logged on failure; save still succeeds)
   → bump rate counter
   → HTMX request: partial form success response
   → normal request: redirect back to contact page
@@ -285,22 +285,31 @@ python manage.py seed_portfolio
 ```text
 Personal-Portfolio-Website/
   manage.py
+  .github/
+    workflows/
+      ci.yml
   portfolio_site/
     settings/
       base.py
       dev.py
       prod.py
+      required_env.py
     urls.py
     middleware.py
+    test_middleware.py
+    test_required_env.py
     wsgi.py
     asgi.py
   core/
+    models.py
     views.py
+    admin.py
     context_processors.py
     sitemaps.py
     templatetags/
       portfolio_tags.py
     tests.py
+    test_portfolio_tags.py
   projects/
     models.py
     views.py
@@ -337,6 +346,8 @@ Personal-Portfolio-Website/
   pyproject.toml
   railway.toml
   Procfile
+  .env.example
+  personal_portfolio_website_docs.md
 ```
 
 ---
@@ -374,7 +385,7 @@ core.views
   └── django.shortcuts.render
 
 core.context_processors
-  └── django.conf.settings
+  └── django.conf.settings (canonical URL, site origin, public profile link settings)
 
 core.templatetags.portfolio_tags
   ├── markdown.markdown
@@ -604,14 +615,23 @@ Responsibilities:
 
 Builds:
 ```python
-canonical_url = settings.CANONICAL_URL.rstrip("/") + request.path
-site_origin = settings.CANONICAL_URL.rstrip("/")
+base = settings.CANONICAL_URL.rstrip("/")
+canonical_url = base + request.path  # path normalized to start with "/"
+site_origin = base
 ```
 
-Returns:
+Returns a dict including:
 ```python
-{"canonical_url": canonical_url, "site_origin": base}
+{
+    "canonical_url": canonical_url,
+    "site_origin": base,
+    "public_github_url": settings.PUBLIC_GITHUB_URL,
+    "public_linkedin_url": settings.PUBLIC_LINKEDIN_URL,
+    "public_contact_email": settings.PUBLIC_CONTACT_EMAIL,
+}
 ```
+
+Templates use these for `<link rel="canonical">`, Open Graph `og:url` / absolute `og:image`, and footer/contact direct links.
 
 ---
 
@@ -728,7 +748,7 @@ Returns:
 (previous_project, next_project)
 ```
 
-based on published ordering and created-at tie-breakers.
+using the published ordering (`-published_at`, `-created_at`) with `created_at` tie-breaks, implemented with bounded queries against the published queryset (not by loading all projects into memory).
 
 ---
 
@@ -782,7 +802,7 @@ Returns:
 
 ### `client_ip(request)`
 
-Prefers first `HTTP_X_FORWARDED_FOR` value. Falls back to `REMOTE_ADDR`.
+Returns `REMOTE_ADDR` when **`CONTACT_TRUST_X_FORWARDED_FOR`** is false (default). When that setting is true (trusted reverse proxy), uses the first hop of **`HTTP_X_FORWARDED_FOR`**, otherwise falls back to **`REMOTE_ADDR`**. This keeps rate limiting and stored IPs from trusting a client-spoofable header unless explicitly enabled.
 
 ---
 
@@ -858,14 +878,14 @@ Creates sample content and assets:
 Defines:
 - canonical link
 - page title and meta description
-- Open Graph/Twitter metadata
+- Open Graph/Twitter metadata (including absolute `og:image` via `site_origin` + static path)
 - compiled CSS link
 - HTMX CDN script with SRI
 - skip link
 - navigation
 - message stack
 - `main#page`
-- footer
+- footer with **`public_github_url`**, **`public_linkedin_url`**, and **`mailto:public_contact_email`** from context processor
 
 ---
 
@@ -907,7 +927,7 @@ Defines:
 
 Defines:
 - contact page copy
-- direct links
+- direct links (GitHub, LinkedIn, email) using the same **`public_*`** context variables as the site footer
 - contact form partial include
 
 ---
@@ -979,20 +999,20 @@ Media:
 
 Loaded by `django-environ` from process environment and `.env`.
 
-Key settings:
-- SECRET_KEY
-- DEBUG
-- ALLOWED_HOSTS
-- DATABASE_URL
-- CANONICAL_URL
-- CONTACT_NOTIFICATION_EMAIL
-- CONTACT_RATE_LIMIT_WINDOW
-- CONTACT_RATE_LIMIT_MAX
-- SECURE_SSL_REDIRECT
-- SECURE_HSTS_SECONDS
-- LOG_LEVEL
-- EMAIL_BACKEND
-- DEFAULT_FROM_EMAIL
+Key settings (see `.env.example` and `README.md` for the full list):
+- `SECRET_KEY` — dev `base` allows a documented default; **`portfolio_site.settings.prod` requires a non-empty `SECRET_KEY` in the environment** (validated via `portfolio_site/settings/required_env.py`, not the insecure dev default).
+- `DEBUG`
+- `ALLOWED_HOSTS`
+- `DATABASE_URL`
+- `CANONICAL_URL`
+- `CONTACT_NOTIFICATION_EMAIL`
+- `CONTACT_RATE_LIMIT_WINDOW`
+- `CONTACT_RATE_LIMIT_MAX`
+- `CONTACT_TRUST_X_FORWARDED_FOR` — when `True`, `client_ip` uses `X-Forwarded-For` (first hop); keep `False` unless behind a trusted proxy.
+- `PUBLIC_GITHUB_URL`, `PUBLIC_LINKEDIN_URL`, `PUBLIC_CONTACT_EMAIL` — footer and contact direct links.
+- `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`
+- `LOG_LEVEL`
+- `EMAIL_BACKEND`, `DEFAULT_FROM_EMAIL`
 
 ---
 
@@ -1060,10 +1080,10 @@ Concurrent request handling is delegated to:
 - Seed content is sample/demo content, not a canonical YAML manifest.
 - Running migrations and collectstatic in the Railway start command is simple but not ideal for larger deployments.
 - Contact notifications require email backend configuration.
-- The footer/direct links use placeholder generic links in templates unless updated.
+- Footer and contact “direct links” use **`PUBLIC_GITHUB_URL`**, **`PUBLIC_LINKEDIN_URL`**, and **`PUBLIC_CONTACT_EMAIL`** (defaults are generic; set real values in the environment for production).
 - The site target is Python 3.12, but README notes local verification on Python 3.14.
 - There is no dedicated health-check endpoint.
-- No CI workflow file was observed during this inspection; pytest is configured through `pyproject.toml`.
+- CI exists at `.github/workflows/ci.yml` (Python 3.12, `requirements-dev.txt`, `pytest`); pytest is also configured in `pyproject.toml` with explicit `testpaths`.
 
 ---
 
@@ -1080,7 +1100,9 @@ Concurrent request handling is delegated to:
 - Cache-backed rate limiting
 - Management command seeding
 - Environment-based settings split
+- **`require_non_empty_str`** for mandatory production `SECRET_KEY` (see `portfolio_site/settings/required_env.py`)
 - Middleware for timing and CSP headers
+- GitHub Actions CI (`.github/workflows/ci.yml`) running `pytest`
 
 ---
 
@@ -1091,10 +1113,10 @@ The test suite verifies:
 - featured project filtering
 - tag-filtered project querysets
 - slug generation and collision handling
-- sitemap behavior for published projects
-- combined sitemap static and dynamic URLs
+- sitemap behavior for published projects and static routes
+- combined sitemap XML URLs
 - HTMX tag filter partial rendering
-- adjacent project navigation
+- adjacent project navigation (including same `published_at` tie-break)
 - unpublished project 404 behavior
 - unknown tag 404 behavior
 - project list pagination and invalid pages
@@ -1102,15 +1124,20 @@ The test suite verifies:
 - contact form valid save behavior
 - invalid contact form errors
 - honeypot behavior
-- rate limiting
+- rate limiting and per-IP isolation
 - notification email behavior
-- email failure tolerance
-- per-IP rate limiting
-- canonical URL context
+- email failure tolerance (save still succeeds)
+- `client_ip` with and without `CONTACT_TRUST_X_FORWARDED_FOR`
+- canonical URL and public profile context keys
+- home footer respects overridden `PUBLIC_*` settings
 - public URL smoke tests
 - robots.txt canonical sitemap
+- static view sitemap items/locations
 - custom 404 and 500 handlers
 - about page rendering
+- `RequestTimingMiddleware` CSP and debug duration header behavior
+- `markdownify` / `reading_time` / `active_nav` templatetag behavior
+- `require_non_empty_str` (production secret helper)
 
 ---
 
@@ -1321,7 +1348,7 @@ Output includes:
 - metadata
 - featured projects
 - tags
-- global nav/footer
+- global navigation and footer (footer links from `PUBLIC_*` settings via context processor)
 - compiled CSS
 - HTMX script
 
@@ -1364,7 +1391,7 @@ Output includes:
 
 Output includes:
 - contact page
-- direct links
+- direct links (from `PUBLIC_*` settings)
 - contact form
 - CSRF token
 - honeypot field
@@ -1459,7 +1486,7 @@ The project does not define custom process exit codes.
 
 | Variable | Required | Default / Behavior | Description |
 |---|---|---|---|
-| `SECRET_KEY` | Required outside local defaults | local insecure fallback | Django secret |
+| `SECRET_KEY` | Yes in production (`prod` settings) | Dev `base` may use a local default via django-environ | Django secret; **prod** refuses empty/missing values. |
 | `DEBUG` | No | false in base, true in dev | Debug mode |
 | `ALLOWED_HOSTS` | Yes in production | localhost/testserver defaults | Comma-separated hostnames |
 | `DATABASE_URL` | No locally, yes in production | local SQLite URL | Database connection |
@@ -1470,6 +1497,10 @@ The project does not define custom process exit codes.
 | `CONTACT_NOTIFICATION_EMAIL` | No | empty / disabled | Recipient for contact notifications |
 | `CONTACT_RATE_LIMIT_WINDOW` | No | 900 | Rate-limit window in seconds |
 | `CONTACT_RATE_LIMIT_MAX` | No | 5 | Max contact submissions per IP per window |
+| `CONTACT_TRUST_X_FORWARDED_FOR` | No | `False` | If `True`, trust first `X-Forwarded-For` for `client_ip` (trusted proxy only). |
+| `PUBLIC_GITHUB_URL` | No | generic GitHub root | Footer / contact GitHub link |
+| `PUBLIC_LINKEDIN_URL` | No | generic LinkedIn root | Footer / contact LinkedIn link |
+| `PUBLIC_CONTACT_EMAIL` | No | placeholder email | Footer / contact `mailto` target |
 | `SECURE_SSL_REDIRECT` | Production | true in prod | Redirect HTTP to HTTPS |
 | `SECURE_HSTS_SECONDS` | Production | 31536000 in prod | HSTS max age |
 
@@ -1520,6 +1551,10 @@ DJANGO_SETTINGS_MODULE = portfolio_site.settings.dev
 python_files = tests.py, test_*.py, *_tests.py
 testpaths = about, core, contact, projects, portfolio_site
 ```
+
+### `.github/workflows/ci.yml`
+
+Runs on push and pull request to `main` or `master`: checks out the repo, sets up Python 3.12, installs `requirements-dev.txt`, and runs `pytest` with `SECRET_KEY` set for Django.
 
 ---
 
@@ -1692,7 +1727,7 @@ The README notes that the current machine used for local verification exposed Py
 - Gunicorn
 - Postgres-compatible `DATABASE_URL`
 - collected static files
-- configured `SECRET_KEY`, `ALLOWED_HOSTS`, and `CANONICAL_URL`
+- configured **`SECRET_KEY`** (required, non-empty for prod settings), **`ALLOWED_HOSTS`**, and **`CANONICAL_URL`**
 
 ---
 
@@ -1805,13 +1840,25 @@ Behavior:
 Set:
 ```text
 DJANGO_SETTINGS_MODULE=portfolio_site.settings.prod
-SECRET_KEY=<strong-secret>
+SECRET_KEY=<strong-secret>   # required: non-empty; prod does not use the dev default
 DEBUG=False
 ALLOWED_HOSTS=<production-hosts>
 DATABASE_URL=<postgres-url>
 CANONICAL_URL=<https-site-origin>
 SECURE_SSL_REDIRECT=True
 SECURE_HSTS_SECONDS=31536000
+```
+
+Optional public identity (footer and contact page):
+```text
+PUBLIC_GITHUB_URL=<your-profile-url>
+PUBLIC_LINKEDIN_URL=<your-profile-url>
+PUBLIC_CONTACT_EMAIL=<your-email>
+```
+
+Behind a trusted reverse proxy that sets `X-Forwarded-For` safely (e.g. some Railway setups), you may set:
+```text
+CONTACT_TRUST_X_FORWARDED_FOR=True
 ```
 
 Optional contact email:
@@ -2121,8 +2168,7 @@ pytest
 ```
 
 Expected:
-- all tests pass
-- project/contact/core/about tests run
+- all tests pass (see `pyproject.toml` `testpaths`; CI runs the same command in GitHub Actions)
 
 ---
 
@@ -2203,7 +2249,9 @@ Review:
 ```text
 CONTACT_RATE_LIMIT_WINDOW
 CONTACT_RATE_LIMIT_MAX
-HTTP_X_FORWARDED_FOR / REMOTE_ADDR handling
+REMOTE_ADDR (default client IP)
+CONTACT_TRUST_X_FORWARDED_FOR (only enable behind a trusted proxy)
+HTTP_X_FORWARDED_FOR (used only when trust flag is true)
 ```
 
 ---
@@ -2256,6 +2304,8 @@ Site will not start
   │     └── pip install -r requirements-dev.txt or requirements.txt
   ├── Settings module wrong?
   │     └── Use portfolio_site.settings.dev locally or prod in Railway
+  ├── Production SECRET_KEY missing or empty?
+  │     └── Set a strong SECRET_KEY in the host environment (prod settings reject blank)
   ├── Database unavailable?
   │     └── Check DATABASE_URL and run migrate
   └── Static collection failure?
