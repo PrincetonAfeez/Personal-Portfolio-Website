@@ -24,6 +24,11 @@ CANONICAL_URL = env("CANONICAL_URL", default="http://127.0.0.1:8000")
 CONTACT_NOTIFICATION_EMAIL = env("CONTACT_NOTIFICATION_EMAIL", default="") or None
 CONTACT_RATE_LIMIT_WINDOW = env.int("CONTACT_RATE_LIMIT_WINDOW", default=900)
 CONTACT_RATE_LIMIT_MAX = env.int("CONTACT_RATE_LIMIT_MAX", default=5)
+CONTACT_TRUST_X_FORWARDED_FOR = env.bool("CONTACT_TRUST_X_FORWARDED_FOR", default=False)
+
+PUBLIC_GITHUB_URL = env("PUBLIC_GITHUB_URL", default="https://github.com/")
+PUBLIC_LINKEDIN_URL = env("PUBLIC_LINKEDIN_URL", default="https://www.linkedin.com/")
+PUBLIC_CONTACT_EMAIL = env("PUBLIC_CONTACT_EMAIL", default="hello@example.com")
 
 CACHES = {
     "default": {
