@@ -12,4 +12,10 @@ def canonical_urls(request: HttpRequest) -> dict[str, str]:
     if not path.startswith("/"):
         path = f"/{path}"
     canonical_url = f"{base}{path}"
-    return {"canonical_url": canonical_url, "site_origin": base}
+    return {
+        "canonical_url": canonical_url,
+        "site_origin": base,
+        "public_github_url": settings.PUBLIC_GITHUB_URL,
+        "public_linkedin_url": settings.PUBLIC_LINKEDIN_URL,
+        "public_contact_email": settings.PUBLIC_CONTACT_EMAIL,
+    }

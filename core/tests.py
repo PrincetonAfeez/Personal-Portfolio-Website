@@ -18,6 +18,9 @@ def test_canonical_urls_context_processor():
     ctx = canonical_urls(request)
     assert ctx["canonical_url"] == "https://example.com/projects/"
     assert ctx["site_origin"] == "https://example.com"
+    assert "public_github_url" in ctx
+    assert "public_linkedin_url" in ctx
+    assert "public_contact_email" in ctx
 
 
 @override_settings(CANONICAL_URL="https://example.com/")
@@ -26,6 +29,21 @@ def test_canonical_urls_strips_trailing_slash_on_origin():
     ctx = canonical_urls(request)
     assert ctx["canonical_url"] == "https://example.com/"
     assert ctx["site_origin"] == "https://example.com"
+
+
+@override_settings(
+    PUBLIC_CONTACT_EMAIL="public@example.org",
+    PUBLIC_GITHUB_URL="https://github.com/me",
+    PUBLIC_LINKEDIN_URL="https://www.linkedin.com/in/me",
+)
+@pytest.mark.django_db
+def test_home_footer_uses_public_profile_settings(client):
+    response = client.get(reverse("home"))
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "mailto:public@example.org" in html
+    assert "https://github.com/me" in html
+    assert "https://www.linkedin.com/in/me" in html
 
 
 @pytest.mark.django_db
