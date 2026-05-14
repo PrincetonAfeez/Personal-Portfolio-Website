@@ -17,9 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 def client_ip(request: HttpRequest) -> str | None:
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+    """Client IP for logging and rate limits.
+
+    ``HTTP_X_FORWARDED_FOR`` is only used when ``CONTACT_TRUST_X_FORWARDED_FOR`` is
+    true (e.g. behind a trusted reverse proxy that sets or strips this header).
+    Otherwise only ``REMOTE_ADDR`` is used to avoid trivial header spoofing.
+    """
+    if getattr(settings, "CONTACT_TRUST_X_FORWARDED_FOR", False):
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
 
 

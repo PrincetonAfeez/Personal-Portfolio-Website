@@ -38,6 +38,20 @@ def test_contact_form_valid_submission_saves(client):
 
 
 @pytest.mark.django_db
+def test_contact_stores_remote_addr_when_forwarded_header_untrusted(client):
+    cache.clear()
+    client.post(
+        reverse("contact:index"),
+        _contact_payload(),
+        HTTP_HX_REQUEST="true",
+        HTTP_X_FORWARDED_FOR="203.0.113.99",
+        REMOTE_ADDR="198.51.100.22",
+    )
+    row = ContactSubmission.objects.get()
+    assert row.ip_address == "198.51.100.22"
+
+
+@pytest.mark.django_db
 def test_contact_form_invalid_submission_shows_errors(client):
     cache.clear()
     response = client.post(
@@ -109,14 +123,27 @@ def test_contact_sends_notification_when_configured(client):
     assert mail.outbox[0].to == ["owner@example.com"]
 
 
-def test_client_ip_prefers_first_x_forwarded_for_value():
+def test_client_ip_prefers_first_x_forwarded_for_value_when_trusted():
     from django.test import RequestFactory
 
     request = RequestFactory().get(
         "/",
         HTTP_X_FORWARDED_FOR="203.0.113.7, 10.0.0.2",
     )
-    assert client_ip(request) == "203.0.113.7"
+    with override_settings(CONTACT_TRUST_X_FORWARDED_FOR=True):
+        assert client_ip(request) == "203.0.113.7"
+
+
+def test_client_ip_ignores_x_forwarded_when_proxy_not_trusted():
+    from django.test import RequestFactory
+
+    request = RequestFactory().get(
+        "/",
+        HTTP_X_FORWARDED_FOR="203.0.113.7",
+        REMOTE_ADDR="198.51.100.1",
+    )
+    with override_settings(CONTACT_TRUST_X_FORWARDED_FOR=False):
+        assert client_ip(request) == "198.51.100.1"
 
 
 def test_client_ip_falls_back_to_remote_addr():
