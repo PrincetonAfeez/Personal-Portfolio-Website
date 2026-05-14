@@ -802,7 +802,7 @@ Returns:
 
 ### `client_ip(request)`
 
-Returns `REMOTE_ADDR` when **`CONTACT_TRUST_X_FORWARDED_FOR`** is false (default). When that setting is true (trusted reverse proxy), uses the first hop of **`HTTP_X_FORWARDED_FOR`**, otherwise falls back to **`REMOTE_ADDR`**. This keeps rate limiting and stored IPs from trusting a client-spoofable header unless explicitly enabled.
+Returns `REMOTE_ADDR` when **`CONTACT_TRUST_X_FORWARDED_FOR`** is false. When true (default **on** in `portfolio_site.settings.prod`, **off** in `portfolio_site.settings.dev`), uses the first hop of **`HTTP_X_FORWARDED_FOR`**, otherwise falls back to **`REMOTE_ADDR`**. This avoids trusting a spoofable header in local development while staying proxy-aware in typical PaaS production setups.
 
 ---
 
@@ -1000,7 +1000,7 @@ Media:
 Loaded by `django-environ` from process environment and `.env`.
 
 Key settings (see `.env.example` and `README.md` for the full list):
-- `SECRET_KEY` — dev `base` allows a documented default; **`portfolio_site.settings.prod` requires a non-empty `SECRET_KEY` in the environment** (validated via `portfolio_site/settings/required_env.py`, not the insecure dev default).
+- `SECRET_KEY` — dev **`base`** uses `env("SECRET_KEY", default=...)` for local convenience; **`portfolio_site.settings.prod`** sets `SECRET_KEY = env("SECRET_KEY")` (no default, so it must exist in the environment) and **rejects** the known local default string so it cannot be deployed by mistake.
 - `DEBUG`
 - `ALLOWED_HOSTS`
 - `DATABASE_URL`
@@ -1008,7 +1008,7 @@ Key settings (see `.env.example` and `README.md` for the full list):
 - `CONTACT_NOTIFICATION_EMAIL`
 - `CONTACT_RATE_LIMIT_WINDOW`
 - `CONTACT_RATE_LIMIT_MAX`
-- `CONTACT_TRUST_X_FORWARDED_FOR` — when `True`, `client_ip` uses `X-Forwarded-For` (first hop); keep `False` unless behind a trusted proxy.
+- `CONTACT_TRUST_X_FORWARDED_FOR` — in **`base`** defaults to `False` (use `REMOTE_ADDR` only). In **`prod`** it defaults to **`True`** so PaaS reverse proxies can supply `X-Forwarded-For` for rate limits and stored contact IP; set `False` if not behind a trusted proxy.
 - `PUBLIC_GITHUB_URL`, `PUBLIC_LINKEDIN_URL`, `PUBLIC_CONTACT_EMAIL` — footer and contact direct links.
 - `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`
 - `LOG_LEVEL`
@@ -1100,7 +1100,7 @@ Concurrent request handling is delegated to:
 - Cache-backed rate limiting
 - Management command seeding
 - Environment-based settings split
-- **`require_non_empty_str`** for mandatory production `SECRET_KEY` (see `portfolio_site/settings/required_env.py`)
+- **`require_non_empty_str`** helper in `portfolio_site/settings/required_env.py` (unit-tested; usable for other mandatory env reads)
 - Middleware for timing and CSP headers
 - GitHub Actions CI (`.github/workflows/ci.yml`) running `pytest`
 
@@ -1135,9 +1135,10 @@ The test suite verifies:
 - static view sitemap items/locations
 - custom 404 and 500 handlers
 - about page rendering
+- about **Skill** and **TimelineEntry** queryset ordering (`Meta.ordering`)
 - `RequestTimingMiddleware` CSP and debug duration header behavior
 - `markdownify` / `reading_time` / `active_nav` templatetag behavior
-- `require_non_empty_str` (production secret helper)
+- `require_non_empty_str` helper (`required_env.py`) for strict env reads
 
 ---
 
@@ -1486,7 +1487,7 @@ The project does not define custom process exit codes.
 
 | Variable | Required | Default / Behavior | Description |
 |---|---|---|---|
-| `SECRET_KEY` | Yes in production (`prod` settings) | Dev `base` may use a local default via django-environ | Django secret; **prod** refuses empty/missing values. |
+| `SECRET_KEY` | Yes in production (`prod` settings) | Dev `base` uses `env(..., default=local placeholder)` | Django secret; **prod** uses `env("SECRET_KEY")` with no default and rejects the dev placeholder value. |
 | `DEBUG` | No | false in base, true in dev | Debug mode |
 | `ALLOWED_HOSTS` | Yes in production | localhost/testserver defaults | Comma-separated hostnames |
 | `DATABASE_URL` | No locally, yes in production | local SQLite URL | Database connection |
@@ -1497,7 +1498,7 @@ The project does not define custom process exit codes.
 | `CONTACT_NOTIFICATION_EMAIL` | No | empty / disabled | Recipient for contact notifications |
 | `CONTACT_RATE_LIMIT_WINDOW` | No | 900 | Rate-limit window in seconds |
 | `CONTACT_RATE_LIMIT_MAX` | No | 5 | Max contact submissions per IP per window |
-| `CONTACT_TRUST_X_FORWARDED_FOR` | No | `False` | If `True`, trust first `X-Forwarded-For` for `client_ip` (trusted proxy only). |
+| `CONTACT_TRUST_X_FORWARDED_FOR` | No | `False` in **dev `base`**; **`True` by default in `prod`** | Client IP for contact: first `X-Forwarded-For` hop when true (trusted proxy); else `REMOTE_ADDR`. |
 | `PUBLIC_GITHUB_URL` | No | generic GitHub root | Footer / contact GitHub link |
 | `PUBLIC_LINKEDIN_URL` | No | generic LinkedIn root | Footer / contact LinkedIn link |
 | `PUBLIC_CONTACT_EMAIL` | No | placeholder email | Footer / contact `mailto` target |
@@ -1856,10 +1857,7 @@ PUBLIC_LINKEDIN_URL=<your-profile-url>
 PUBLIC_CONTACT_EMAIL=<your-email>
 ```
 
-Behind a trusted reverse proxy that sets `X-Forwarded-For` safely (e.g. some Railway setups), you may set:
-```text
-CONTACT_TRUST_X_FORWARDED_FOR=True
-```
+**`CONTACT_TRUST_X_FORWARDED_FOR`** defaults to **`True` in production** so rate limits and stored IPs follow the real client behind the platform proxy. Set **`CONTACT_TRUST_X_FORWARDED_FOR=False`** if the app is not behind a trusted reverse proxy.
 
 Optional contact email:
 ```text
@@ -2250,7 +2248,7 @@ Review:
 CONTACT_RATE_LIMIT_WINDOW
 CONTACT_RATE_LIMIT_MAX
 REMOTE_ADDR (default client IP)
-CONTACT_TRUST_X_FORWARDED_FOR (only enable behind a trusted proxy)
+CONTACT_TRUST_X_FORWARDED_FOR (defaults true in prod; false in dev; set false in prod only if not behind a trusted proxy)
 HTTP_X_FORWARDED_FOR (used only when trust flag is true)
 ```
 
@@ -2304,8 +2302,8 @@ Site will not start
   │     └── pip install -r requirements-dev.txt or requirements.txt
   ├── Settings module wrong?
   │     └── Use portfolio_site.settings.dev locally or prod in Railway
-  ├── Production SECRET_KEY missing or empty?
-  │     └── Set a strong SECRET_KEY in the host environment (prod settings reject blank)
+  ├── Production SECRET_KEY missing, empty, or dev placeholder?
+  │     └── Set a strong unique `SECRET_KEY` in the host environment (`prod` uses `env("SECRET_KEY")` with no default and rejects the local dev default string)
   ├── Database unavailable?
   │     └── Check DATABASE_URL and run migrate
   └── Static collection failure?
