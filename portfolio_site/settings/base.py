@@ -8,13 +8,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env(
     DEBUG=(bool, False),
-    SECRET_KEY=(str, "django-insecure-local-portfolio-build-key"),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1", "testserver"]),
     DATABASE_URL=(str, f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("SECRET_KEY")
+# Local default only; production settings re-assign SECRET_KEY without this fallback.
+SECRET_KEY = env("SECRET_KEY", default="django-insecure-local-portfolio-build-key")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "testserver"])
 
