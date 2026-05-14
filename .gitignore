@@ -1,0 +1,39 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Bytecode / packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Local env and secrets
+.env
+.env.local
+*.local
+
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
